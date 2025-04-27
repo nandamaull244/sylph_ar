@@ -1,9 +1,11 @@
+// File: android/settings.gradle
+
 pluginManagement {
     def flutterSdkPath = {
         def properties = new Properties()
         file("local.properties").withInputStream { properties.load(it) }
         def flutterSdkPath = properties.getProperty("flutter.sdk")
-        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+        assert flutterSdkPath != null : "flutter.sdk not set in local.properties"
         return flutterSdkPath
     }()
 
@@ -13,6 +15,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url "https://storage.googleapis.com/download.flutter.io" }
     }
 }
 
@@ -22,4 +25,48 @@ plugins {
     id "org.jetbrains.kotlin.android" version "1.8.22" apply false
 }
 
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+
+    // Force namespace untuk plugin yang error
+    def applyNamespace = { projectDir, namespace ->
+        def buildFile = new File(projectDir, "build.gradle")
+        if (buildFile.exists()) {
+            def content = buildFile.text
+            if (!content.contains("namespace")) {
+                buildFile.text = """
+                android {
+                    namespace '$namespace'
+                }
+                $content
+                """.trim()
+            }
+        }
+    }
+
+    gradle.beforeProject { project ->
+        if (project.path.contains('ffmpeg_kit_flutter_full_gpl')) {
+            applyNamespace(project.projectDir, "com.arthenica.ffmpeg_kit_flutter")
+        }
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://www.jitpack.io" }
+        maven { url "https://storage.googleapis.com/download.flutter.io" }
+        maven { url "https://dl.cloudsmith.io/public/arthenica/ffmpeg-kit/maven/" }
+
+    }
+}
+
+
 include ":app"
+
+// gradle.ext.ffmpegKitFlutterNamespace = "com.arthenica.ffmpeg_kit_flutter"
+
+// // // Apply namespace fix for ffmpeg_kit_flutter_full_gpl
+// // gradle.projectsEvaluated {
+// //     rootProject.apply(from: "ffmpeg_kit_flutter_fix.gradle")
+// // }
+

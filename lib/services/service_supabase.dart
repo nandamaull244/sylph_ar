@@ -71,34 +71,133 @@ class SupabaseService {
   }
 
   // Upload video dan simpan ke tabel
+  // Future<bool> uploadAndSaveVideo({
+  //   required String userId,
+  //   required String imageId,
+  //   required String filePath,
+  //   required String fileName,
+  //   required String title,
+  //   void Function(double progress)? onProgress,
+  // }) async {
+  //   final file = File(filePath);
+  //   final fileBytes = await file.readAsBytes();
+
+  //   final storagePath = 'video/$userId/$fileName';
+
+  //   try {
+  //     // Upload ke Supabase Storage (bucket: media)
+  //     final upload = client.storage.from('media').uploadBinary(
+  //           storagePath,
+  //           fileBytes,
+  //           fileOptions: const FileOptions(upsert: true),
+  //         );
+
+  //     final response = await upload;
+
+  //     if (response == null) {
+  //       print('Upload gagal');
+  //       return false;
+  //     }
+
+  //     // Ambil public URL
+  //     final publicUrl = client.storage.from('media').getPublicUrl(storagePath);
+
+  //     // Insert ke tabel video
+  //     final videoInsert = await client
+  //         .from('video')
+  //         .insert({
+  //           'user_id': userId,
+  //           'image_target_id': imageId,
+  //           'video_url': publicUrl,
+  //         })
+  //         .select('id')
+  //         .single(); // Supaya dapet id video yg baru dibuat
+
+  //     final videoId = videoInsert['id'];
+
+  //     if (videoId == null) {
+  //       print('Gagal insert video');
+  //       return false;
+  //     }
+
+  //     // Insert ke tabel artwork
+  //     final artworkInsert = await client.from('artwork').insert({
+  //       'user_id': userId,
+  //       'image_target_id': imageId,
+  //       'video_id': videoId,
+  //       'title': title,
+  //       'created_at': DateTime.now().toUtc().toIso8601String(),
+  //     });
+
+  //     final artworkId = artworkInsert['id'];
+  //     if (artworkId == null) {
+  //       print('Gagal insert artwork');
+  //       return false;
+  //     }
+
+  //     print('Video dan Artwork berhasil disimpan');
+  //     return true;
+  //   } on StorageException catch (e) {
+  //     print('Gagal upload video: ${e.message}');
+  //     return false;
+  //   } catch (e) {
+  //     print('Error lain: $e');
+  //     return false;
+  //   }
+  // }
+
   Future<bool> uploadAndSaveVideo({
     required String userId,
     required String imageId,
     required String filePath,
     required String fileName,
+    void Function(double progress)? onProgress,
+    required String title,
   }) async {
     final file = File(filePath);
+    final fileBytes = await file.readAsBytes();
     final storagePath = 'video/$userId/$fileName';
 
     try {
-      // Upload ke Supabase Storage (bucket: media)
-      await client.storage.from('media').upload(
+      final upload = client.storage.from('media').uploadBinary(
             storagePath,
-            file,
+            fileBytes,
             fileOptions: const FileOptions(upsert: true),
           );
 
-      // Ambil URL publik dari video
+      final response = await upload;
       final publicUrl = client.storage.from('media').getPublicUrl(storagePath);
 
       // Simpan ke tabel video
-      final insertResponse = await client.from('video').insert({
+      final videoInsert = await client
+          .from('video')
+          .insert({
+            'user_id': userId,
+            'image_target_id': imageId,
+            'video_url': publicUrl,
+          })
+          .select()
+          .single();
+
+      final videoId = videoInsert['id'];
+      if (videoId == null) {
+        print('Gagal insert video');
+        return false;
+      }
+      // Simpan ke tabel artwork
+      final artworkInsert = await client.from('artwork').insert({
         'user_id': userId,
         'image_target_id': imageId,
-        'video_url': publicUrl,
+        'title': title,
       });
+      print('Artwork berhasil disimpan: $response');
+      final artworkId = artworkInsert['id'];
+      if (artworkId == null) {
+        print('Gagal insert artwork');
+        return false;
+      }
 
-      print('Video berhasil disimpan: $insertResponse');
+      print('Video & Artwork berhasil disimpan.');
       return true;
     } on StorageException catch (e) {
       print('Gagal upload video: ${e.message}');
@@ -106,6 +205,23 @@ class SupabaseService {
     } catch (e) {
       print('Error lain: $e');
       return false;
+    }
+  }
+
+  Future<void> createArtwork(
+    String userId,
+    String imageTargetId,
+    String videoUrl,
+  ) async {
+    final response = await client.from('artworks').insert({
+      'user_id': userId,
+      'image_target_id': imageTargetId,
+      'video_url': videoUrl,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    if (response != null && response.error != null) {
+      throw Exception('Gagal membuat artwork: ${response.error!.message}');
     }
   }
 
@@ -118,5 +234,22 @@ class SupabaseService {
         await client.from('image_targets').select().eq('user_id', userId);
 
     return data.map((e) => ImageTargetModel.fromJson(e)).toList();
+  }
+
+  Future<void> updateArtwork(String artworkId, String videoUrl) async {
+    await client.from('artworks').update({
+      'video_url': videoUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', artworkId);
+  }
+
+  Future<String?> uploadVideoFile(File file) async {
+    final fileName = 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+    final res = await client.storage.from('videos').upload(fileName, file);
+    if (res != null) {
+      final publicUrl = client.storage.from('videos').getPublicUrl(fileName);
+      return publicUrl;
+    }
+    return null;
   }
 }

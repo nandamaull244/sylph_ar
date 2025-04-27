@@ -54,10 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchData() async {
     final userId = SupabaseService().client.auth.currentUser!.id;
+    print("current user data: $userId");
 
     final imgTargetData = await SupabaseService().getImageTargets(userId);
     final artworkData = await SupabaseService().getArtworks(userId);
     final videoData = await SupabaseService().getVideos(userId);
+
+    print("image target data: $imgTargetData");
 
     setState(() {
       imageTargets =
@@ -74,30 +77,62 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         builder: (context) {
-          return Container(
-            height: 300,
-            padding: EdgeInsets.all(16),
-            child: ListView.builder(
-              itemCount: imageTargets.length,
-              itemBuilder: (context, index) {
-                final target = imageTargets[index];
-                return ListTile(
-                  title: Text(target.name),
-                  subtitle: Text('Image ID: ${target.id}'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ArtworkUploadPage(
-                          imageTarget: target,
+          if (imageTargets.isEmpty) {
+            return Center(
+              child: Text(
+                "Belum ada image target yang tersedia.",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            );
+          }
+          return Column(
+            children: [
+              SizedBox(height: 16),
+              Text(
+                'Pilih image target',
+                style: titleStyle,
+              ),
+              SizedBox(height: 16),
+              Container(
+                height: 300,
+                padding: EdgeInsets.all(16),
+                child: ListView.builder(
+                  itemCount: imageTargets.length,
+                  itemBuilder: (context, index) {
+                    final target = imageTargets[index];
+                    return ListTile(
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          target.imageUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.broken_image),
                         ),
                       ),
-                    ).then((_) => _fetchData());
+                      title: Text(target.name),
+                      subtitle: Text(
+                        '${target.createdAt != null ? DateTime.parse(target.createdAt!).day : 'N/A'}-${target.createdAt != null ? DateTime.parse(target.createdAt!).month : 'N/A'}-${target.createdAt != null ? DateTime.parse(target.createdAt!).year : 'N/A'}',
+                      ),
+                      trailing: Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ArtworkUploadPage(
+                              imageTarget: target,
+                            ),
+                          ),
+                        ).then((_) => _fetchData());
+                      },
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           );
         });
   }
@@ -220,7 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (context) => ArtworkUploadPage(
                             imageTarget: imageTarget,
-                            artwork: artwork,
                           ),
                         ),
                       ).then((_) => _fetchData());

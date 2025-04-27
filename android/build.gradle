@@ -1,14 +1,32 @@
+buildscript {
+    ext {
+        ffmpegKitFlutterNamespace = "com.arthenica.ffmpeg_kit_flutter"
+    }
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://dl.cloudsmith.io/public/arthenica/ffmpeg-kit/maven/" }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        // classpath untuk Kotlin dan plugin Flutter jika perlu
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://dl.cloudsmith.io/public/arthenica/ffmpeg-kit/maven/" }
     }
 }
 
 rootProject.buildDir = "../build"
+
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
@@ -16,6 +34,3 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-
-
-
