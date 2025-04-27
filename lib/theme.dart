@@ -58,6 +58,11 @@ TextStyle regularTextStylePink = GoogleFonts.lato(
   fontSize: 12,
   fontWeight: FontWeight.w400,
 );
+TextStyle boldTextStylePink = GoogleFonts.lato(
+  color: secondaryColor,
+  fontSize: 14,
+  fontWeight: FontWeight.w600,
+);
 TextStyle regularTextStyleWhite = GoogleFonts.lato(
   color: whiteColor,
   fontSize: 12,

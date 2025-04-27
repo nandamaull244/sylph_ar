@@ -1,0 +1,5 @@
+afterEvaluate { project ->
+    if (project.name == "ffmpeg_kit_flutter_full_gpl") {
+        project.android.namespace = project.rootProject.ext.ffmpegKitFlutterNamespace
+    }
+}
